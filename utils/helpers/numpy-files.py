@@ -15,17 +15,19 @@ def load_obj(name ):
     with open(name + '.pkl', 'rb') as f:
         return pickle.load(f)
 
-# create data
-arr = np.array([1.3, 2., 3.])
-dict = { 'arr1' : arr }
+if __name__ == "__main__":
 
-# write data to file
-fname = 'dict1'
-save_obj(dict, fname)
-
-# load saved data
-loadedDict = load_obj(fname)
-
-#print loaded data
-print(loadedDict)
+    # create data
+    arr = np.array([1.3, 2., 3.])
+    dict = { 'arr1' : arr }
+    
+    # write data to file
+    fname = 'dict1'
+    save_obj(dict, fname)
+    
+    # load saved data
+    loadedDict = load_obj(fname)
+    
+    #print loaded data
+    print(loadedDict)
 
