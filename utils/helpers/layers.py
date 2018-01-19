@@ -3,6 +3,7 @@ from cs231n.fast_layers import conv_backward_fast
 from cs231n.fast_layers import max_pool_forward_fast
 from cs231n.fast_layers import max_pool_backward_fast
 from cs231n.layers import *
+import numpy_files as nf
 
 # Base class for all layers
 empty_name_number = 0
@@ -14,6 +15,15 @@ def get_new_name():
     global empty_name_number
     empty_name_number += 1
     return 'empty-name#{}'.format(empty_name_number)
+
+
+def save_network(name):
+    nf.save_obj(params, name)
+
+
+def load_network(name):
+    global params
+    params = nf.load_obj(name)
 
 
 class Layer(object):
@@ -314,13 +324,19 @@ if __name__ == "__main__":
     s1 = Reshape((flat,), c1)
     a1 = Affine((flat, 10), s1)
     l1 = SoftmaxLoss('y', 'loss', a1)
+    try:
+        load_network('network')
+    except IOError:
+        pass
     print("Starting forward...")
     x = {
-        '#input': np.zeros((16, 3, 28, 28)),
+        '#input': np.ones((16, 3, 28, 28)) * 0.1,
         'y': np.zeros(16, dtype=np.int),
         'loss': 0
     }
-    i1.forward(x)
+    res = i1.forward(x)
+    print(res)
 
     print("\nStarting backward...")
     l1.backward(l1.cache)
+    save_network('network')
