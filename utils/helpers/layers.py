@@ -5,7 +5,7 @@ from cs231n.fast_layers import max_pool_backward_fast
 from cs231n.layers import *
 
 # Base class for all layers
-empty_name_number  = 0
+empty_name_number = 0
 params = {}
 grads = {}
 
@@ -68,8 +68,8 @@ class Conv(Layer):
     Inputs:
     - size: (fiters count, previous filters count, filter width, filter height)
     - conv_param: A dictionary with the following keys:
-        - 'stride': The number of pixels between adjacent receptive fields in the
-                    horizontal and vertical directions.
+        - 'stride': The number of pixels between adjacent receptive fields in
+                    the horizontal and vertical directions.
         - 'pad': The number of pixels that will be used to zero-pad the input.
 
     """
@@ -87,7 +87,8 @@ class Conv(Layer):
 
     def _backward(self, x, cache):
         global grads
-        dx, grads[self.n('w')], grads[self.n('b')] = conv_backward_fast(x, cache)
+        dx, grads[self.n('w')], grads[self.n('b')] = \
+            conv_backward_fast(x, cache)
         return dx
 
 
@@ -195,7 +196,8 @@ class Batchnorm(Layer):
 
     def _backward(self, x, cache):
         global grads
-        dx, grads[self.n('gamma')], grads[self.n('beta')] = batchnorm_backward(x, cache)
+        dx, grads[self.n('gamma')], grads[self.n('beta')] = \
+            batchnorm_backward(x, cache)
         return dx
 
 
@@ -261,7 +263,8 @@ class SpatialBatchnorm(Layer):
 
     def _backward(self, x, cache):
         global grads
-        dx, grads[self.n('gamma')], grads[self.n('beta')] = batchnorm_backward(x, cache)
+        dx, grads[self.n('gamma')], grads[self.n('beta')] = \
+            batchnorm_backward(x, cache)
         return dx
 
 
@@ -306,7 +309,7 @@ class L2Norm(Layer):
 if __name__ == "__main__":
     # Instantiation example
     i1 = Input()
-    c1 = Conv((8, 3, 3, 3), { 'stride': 1, 'pad': 1 }, i1)
+    c1 = Conv((8, 3, 3, 3), {'stride': 1, 'pad': 1}, i1)
     flat = 8 * 28 * 28
     s1 = Reshape((flat,), c1)
     a1 = Affine((flat, 10), s1)
