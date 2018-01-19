@@ -124,22 +124,18 @@ class Input(Layer):
 
 
 class SoftmaxLoss(Layer):
-    def __init__(self, ground_truth, prev, name=None, loss_name=None):
+    def __init__(self, ground_truth, loss_name, prev, name=None):
         super(SoftmaxLoss, self).__init__(name, prev)
-        if prev is not None:
-            prev.next = None
-            self.prev = prev.prev
-            prev.prev = self
-        if loss_name is None:
-            loss_name = n('loss')
-        self.cache = None
+        self.loss_name = loss_name
         self.ground_truth = ground_truth
 
     def _forward(self, x):
-       return (None, None) 
+        return (x, None)
 
-    def _backward(self, cache, x)
-        params[loss_name], dx = softmax_loss(x, params[ground_truth])
+    def _backward(self, cache, x):
+        loss, dx = softmax_loss(x, params[ground_truth])
+        params[self.loss_name] += loss
+        return dx
 
 
 class Relu(Layer):
@@ -147,62 +143,139 @@ class Relu(Layer):
         super(Relu, self).__init__(name, prev)
 
     def _forward(self, x):
+        return relu_forward(x)
 
     def _backward(self, cache, x):
+        return relu_backward(x, cache)
 
 
 class Batchnorm(Layer):
-    def __init__(self, prev, name=None):
+    def __init__(self, size, eps, momentum, mode_name, prev, name=None):
         super(Batchnorm, self).__init__(name, prev)
+        params[n('running_mean')] = np.zeros(size)
+        params[n('running_var')] = np.zeros(size)
+        params[n('gamma')] = np.ones(size)
+        params[n('beta')] = np.zeros(size)
+        self.eps = eps
+        self.momentum = momentum
+        self.mode_name = mode_name
 
     def _forward(self, x):
+        bn_params = {
+            'mode': params[self.mode_name],
+            'eps': self.eps,
+            'momentum': self.momentum,
+            'running_mean': params[n('running_mean')],
+            'running_var': params[n('running_var')]}
+
+        res = batchnorm_forward(x, params[n('gamma')],
+                                params[n('beta')], bn_params)
+        params[n('running_mean')] = bn_params['running_mean']
+        params[n('running_var')] = bn_params['running_var']
+
+        return res
 
     def _backward(self, cache, x):
+        dx, grads[n('gamma')], grads[n('beta')] = batchnorm_backward(x, cache)
+        return dx
 
 
 class Dropout(Layer):
-    def __init__(self, prev, name=None):
+    def __init__(self, p, mode_name, prev, name=None):
         super(Dropout, self).__init__(name, prev)
+        self.mode_name = mode_name
+        self.p = p
 
     def _forward(self, x):
+        return dropout_froward(x, {'p': self.p, 'mode': params['mode_name']})
 
     def _backward(self, cache, x):
+        return dropout_backward(x, cache)
 
 
 class MaxPool(Layer):
-    def __init__(self, prev, name=None):
+    """
+    Inputs:
+    - size: (Height, Width)
+    """
+    def __init__(self, size, stride, prev, name=None):
         super(MaxPool, self).__init__(name, prev)
+        self.size = size
+        self.stride = stride
 
     def _forward(self, x):
+        return max_pool_forward_fast(
+            x, {'pool_height': self.size[0], 'pool_width': self.size[1],
+                'stride': self.stride})
 
     def _backward(self, cache, x):
+        return max_pool_backward_fast(x, cache)
 
 
 class SpatialBatchnorm(Layer):
-    def __init__(self, prev, name=None):
+    def __init__(self, size, eps, momentum, mode_name, prev, name=None):
         super(SpatialBatchnorm, self).__init__(name, prev)
+        params[n('running_mean')] = np.zeros(size)
+        params[n('running_var')] = np.zeros(size)
+        params[n('gamma')] = np.ones(size)
+        params[n('beta')] = np.zeros(size)
+        self.eps = eps
+        self.momentum = momentum
+        self.mode_name = mode_name
 
     def _forward(self, x):
+        bn_params = {
+            'mode': params[self.mode_name],
+            'eps': self.eps,
+            'momentum': self.momentum,
+            'running_mean': params[n('running_mean')],
+            'running_var': params[n('running_var')]}
+
+        res = spatial_batchnorm_forward(x, params[n('gamma')],
+                                        params[n('beta')], bn_params)
+        params[n('running_mean')] = bn_params['running_mean']
+        params[n('running_var')] = bn_params['running_var']
+
+        return res
 
     def _backward(self, cache, x):
+        dx, grads[n('gamma')], grads[n('beta')] = batchnorm_backward(x, cache)
+        return dx
 
 
 class SvmLoss(Layer):
-    def __init__(self, prev, name=None):
+    def __init__(self, ground_truth, loss_name, prev, name=None):
         super(SvmLoss, self).__init__(name, prev)
+        self.ground_truth = ground_truth
+        self.loss_name = loss_name
 
     def _forward(self, x):
+        return (x, None)
 
     def _backward(self, cache, x):
+        loss, dx = svm_loss(x, params[self.ground_truth])
+        params[self.loss_name] += loss
+        return dx
 
 
 class L2Norm(Layer):
-    def __init__(self, prev, name=None):
+    def __init__(self, reg, loss_name, prev, name=None):
         super(L2Norm, self).__init__(name, prev)
+        self.reg = reg
+        self.loss_name = loss_name
 
     def _forward(self, x):
+        return (x, None)
 
     def _backward(self, cache, x):
+        keys = np.array(list(params.keys()))
+
+        for key in keys[np.char.endswith(keys, '/w')]:
+            grads[key] += self.reg * params[key]
+            params[self.loss_name] += \
+                0.5 * self.reg * np.sum(params[key] * params[key])
+
+        return x
 
 
 if __name__ == "__main__":
