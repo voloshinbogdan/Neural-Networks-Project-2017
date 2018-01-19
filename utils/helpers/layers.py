@@ -5,18 +5,20 @@ from cs231n.fast_layers import max_pool_backward_fast
 from cs231n.layers import *
 
 # Base class for all layers
-empty_name_number = 0
+empty_name_number  = 0
 params = {}
 grads = {}
 
 
 def get_new_name():
+    global empty_name_number
     empty_name_number += 1
     return 'empty-name#{}'.format(empty_name_number)
 
 
 class Layer(object):
     def __init__(self, name, prev=None):
+        global params
         if name is None:
             name = get_new_name()
         assert name not in params
@@ -56,7 +58,7 @@ class Layer(object):
               .format(self.name, x, cache))
         return "Backward result of " + self.name
 
-    def n(val):
+    def n(self, val):
         return self.name + '/' + val
 
 
@@ -65,19 +67,27 @@ class Conv(Layer):
     """
     Inputs:
     - size: (fiters count, previous filters count, filter width, filter height)
+    - conv_param: A dictionary with the following keys:
+        - 'stride': The number of pixels between adjacent receptive fields in the
+                    horizontal and vertical directions.
+        - 'pad': The number of pixels that will be used to zero-pad the input.
+
     """
     def __init__(self, size, conv_param, prev, weight_scale=1e-3, name=None):
         super(Conv, self).__init__(name, prev)
-        params[n('w')] = weight_scale * np.random.normal(size=size)
-        params[n('b')] = bp.zeros(size[0])
+        global params
+        params[self.n('w')] = weight_scale * np.random.normal(size=size)
+        params[self.n('b')] = np.zeros(size[0])
         self.conv_param = conv_param
 
     def _forward(self, x):
-        return conv_forward_fast(x, params[n('w')], params[n('b')],
+        global params
+        return conv_forward_fast(x, params[self.n('w')], params[self.n('b')],
                                  self.conv_param)
 
     def _backward(self, x, cache):
-        dx, grads[n('w')], grads[n('b')] = conv_backward_fast()
+        global grads
+        dx, grads[self.n('w')], grads[self.n('b')] = conv_backward_fast(x, cache)
         return dx
 
 
@@ -87,7 +97,8 @@ class Reshape(Layer):
         self.new_shape = new_shape
 
     def _forward(self, x):
-        return (x.reshape(new_shape), x.shape)
+        shape = x.shape
+        return (x.reshape((shape[0],) + self.new_shape), shape)
 
     def _backward(self, x, cache):
         dx = x.reshape(cache)
@@ -97,14 +108,17 @@ class Reshape(Layer):
 class Affine(Layer):
     def __init__(self, size, prev, weight_scale=1e-3, name=None):
         super(Affine, self).__init__(name, prev)
-        params[n('w')] = weight_scale * np.random.normal(size=size)
-        params[n('b')] = bp.zeros(size[-1])
+        global params
+        params[self.n('w')] = weight_scale * np.random.normal(size=size)
+        params[self.n('b')] = np.zeros(size[-1])
 
     def _forward(self, x):
-        return affine_forward(x, params[n('w')], params[n('b')])
+        global params
+        return affine_forward(x, params[self.n('w')], params[self.n('b')])
 
-    def _backward(self, cache, x):
-        dx, grads[n('w')], grads[n('b')] = affine_backward(x, cache)
+    def _backward(self, x, cache):
+        global grads
+        dx, grads[self.n('w')], grads[self.n('b')] = affine_backward(x, cache)
         return dx
 
 
@@ -114,12 +128,13 @@ class Input(Layer):
 
     def _forward(self, x):
         assert type(x) == dict
+        global params
         for n in x:
             if n != '#input':
                 params[n] = x[n]
         return (x['#input'], None)
 
-    def _backward(self, cache, x):
+    def _backward(self, x, cache):
         return x
 
 
@@ -130,10 +145,11 @@ class SoftmaxLoss(Layer):
         self.ground_truth = ground_truth
 
     def _forward(self, x):
-        return (x, None)
+        return (x, x)
 
     def _backward(self, cache, x):
-        loss, dx = softmax_loss(x, params[ground_truth])
+        global params
+        loss, dx = softmax_loss(x, params[self.ground_truth])
         params[self.loss_name] += loss
         return dx
 
@@ -145,38 +161,41 @@ class Relu(Layer):
     def _forward(self, x):
         return relu_forward(x)
 
-    def _backward(self, cache, x):
+    def _backward(self, x, cache):
         return relu_backward(x, cache)
 
 
 class Batchnorm(Layer):
     def __init__(self, size, eps, momentum, mode_name, prev, name=None):
         super(Batchnorm, self).__init__(name, prev)
-        params[n('running_mean')] = np.zeros(size)
-        params[n('running_var')] = np.zeros(size)
-        params[n('gamma')] = np.ones(size)
-        params[n('beta')] = np.zeros(size)
+        global params
+        params[self.n('running_mean')] = np.zeros(size)
+        params[self.n('running_var')] = np.zeros(size)
+        params[self.n('gamma')] = np.ones(size)
+        params[self.n('beta')] = np.zeros(size)
         self.eps = eps
         self.momentum = momentum
         self.mode_name = mode_name
 
     def _forward(self, x):
+        global params
         bn_params = {
             'mode': params[self.mode_name],
             'eps': self.eps,
             'momentum': self.momentum,
-            'running_mean': params[n('running_mean')],
-            'running_var': params[n('running_var')]}
+            'running_mean': params[self.n('running_mean')],
+            'running_var': params[self.n('running_var')]}
 
-        res = batchnorm_forward(x, params[n('gamma')],
-                                params[n('beta')], bn_params)
-        params[n('running_mean')] = bn_params['running_mean']
-        params[n('running_var')] = bn_params['running_var']
+        res = batchnorm_forward(x, params[self.n('gamma')],
+                                params[self.n('beta')], bn_params)
+        params[self.n('running_mean')] = bn_params['running_mean']
+        params[self.n('running_var')] = bn_params['running_var']
 
         return res
 
-    def _backward(self, cache, x):
-        dx, grads[n('gamma')], grads[n('beta')] = batchnorm_backward(x, cache)
+    def _backward(self, x, cache):
+        global grads
+        dx, grads[self.n('gamma')], grads[self.n('beta')] = batchnorm_backward(x, cache)
         return dx
 
 
@@ -187,9 +206,10 @@ class Dropout(Layer):
         self.p = p
 
     def _forward(self, x):
+        global params
         return dropout_froward(x, {'p': self.p, 'mode': params['mode_name']})
 
-    def _backward(self, cache, x):
+    def _backward(self, x, cache):
         return dropout_backward(x, cache)
 
 
@@ -208,17 +228,18 @@ class MaxPool(Layer):
             x, {'pool_height': self.size[0], 'pool_width': self.size[1],
                 'stride': self.stride})
 
-    def _backward(self, cache, x):
+    def _backward(self, x, cache):
         return max_pool_backward_fast(x, cache)
 
 
 class SpatialBatchnorm(Layer):
     def __init__(self, size, eps, momentum, mode_name, prev, name=None):
         super(SpatialBatchnorm, self).__init__(name, prev)
-        params[n('running_mean')] = np.zeros(size)
-        params[n('running_var')] = np.zeros(size)
-        params[n('gamma')] = np.ones(size)
-        params[n('beta')] = np.zeros(size)
+        global params
+        params[self.n('running_mean')] = np.zeros(size)
+        params[self.n('running_var')] = np.zeros(size)
+        params[self.n('gamma')] = np.ones(size)
+        params[self.n('beta')] = np.zeros(size)
         self.eps = eps
         self.momentum = momentum
         self.mode_name = mode_name
@@ -228,18 +249,19 @@ class SpatialBatchnorm(Layer):
             'mode': params[self.mode_name],
             'eps': self.eps,
             'momentum': self.momentum,
-            'running_mean': params[n('running_mean')],
-            'running_var': params[n('running_var')]}
+            'running_mean': params[self.n('running_mean')],
+            'running_var': params[self.n('running_var')]}
 
-        res = spatial_batchnorm_forward(x, params[n('gamma')],
-                                        params[n('beta')], bn_params)
-        params[n('running_mean')] = bn_params['running_mean']
-        params[n('running_var')] = bn_params['running_var']
+        res = spatial_batchnorm_forward(x, params[self.n('gamma')],
+                                        params[self.n('beta')], bn_params)
+        params[self.n('running_mean')] = bn_params['running_mean']
+        params[self.n('running_var')] = bn_params['running_var']
 
         return res
 
-    def _backward(self, cache, x):
-        dx, grads[n('gamma')], grads[n('beta')] = batchnorm_backward(x, cache)
+    def _backward(self, x, cache):
+        global grads
+        dx, grads[self.n('gamma')], grads[self.n('beta')] = batchnorm_backward(x, cache)
         return dx
 
 
@@ -250,9 +272,10 @@ class SvmLoss(Layer):
         self.loss_name = loss_name
 
     def _forward(self, x):
-        return (x, None)
+        return (x, x)
 
-    def _backward(self, cache, x):
+    def _backward(self, x, cache):
+        global params
         loss, dx = svm_loss(x, params[self.ground_truth])
         params[self.loss_name] += loss
         return dx
@@ -267,7 +290,9 @@ class L2Norm(Layer):
     def _forward(self, x):
         return (x, None)
 
-    def _backward(self, cache, x):
+    def _backward(self, x, cache):
+        global params
+        global grads
         keys = np.array(list(params.keys()))
 
         for key in keys[np.char.endswith(keys, '/w')]:
@@ -281,12 +306,18 @@ class L2Norm(Layer):
 if __name__ == "__main__":
     # Instantiation example
     i1 = Input()
-    c1 = Conv(i1)
-    s1 = Reshape(c1)
-    a1 = Affine(s1)
-    l1 = SoftmaxLoss(a1)
+    c1 = Conv((8, 3, 3, 3), { 'stride': 1, 'pad': 1 }, i1)
+    flat = 8 * 28 * 28
+    s1 = Reshape((flat,), c1)
+    a1 = Affine((flat, 10), s1)
+    l1 = SoftmaxLoss('y', 'loss', a1)
     print("Starting forward...")
-    i1.forward("input")
+    x = {
+        '#input': np.zeros((16, 3, 28, 28)),
+        'y': np.zeros(16, dtype=np.int),
+        'loss': 0
+    }
+    i1.forward(x)
 
     print("\nStarting backward...")
     l1.backward(l1.cache)

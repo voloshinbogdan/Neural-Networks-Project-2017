@@ -1,5 +1,6 @@
 from builtins import range
 import numpy as np
+from functools import reduce
 
 
 def affine_forward(x, w, b):
