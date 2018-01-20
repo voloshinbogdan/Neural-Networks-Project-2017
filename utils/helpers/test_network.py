@@ -14,19 +14,22 @@ if __name__ == "__main__":
         layers.load_network('network')
     except IOError:
         pass
+
     model = NeuralNetwork(i1, l1, 'loss', layers.params, layers.grads)
-    print("Starting forward...")
-    x = np.ones((16, 3, 28, 28)) * 0.1
-    y = np.ones(16, dtype=np.int) * 2
-    res = model.loss(x)
-    print('--scores--')
-    print(res)
 
-    print("\nStarting backward...")
-    loss, grads = model.loss(x, y)
-    print('--loss--')
-    print(loss)
-    print('--grads--')
-    print(grads)
+    data = {
+      'X_train': np.ones((2**10, 3, 28, 28)) * 0.1,
+      'y_train': np.ones(2**10, dtype=np.int) * 2,
+      'X_val': np.ones((2**3, 3, 28, 28)) * 0.1,
+      'y_val': np.ones(2**3, dtype=np.int) * 2
+    }
+    solver = Solver(model, data,
+                    update_rule='sgd',
+                    optim_config={
+                      'learning_rate': 1e-3,
+                    },
+                    lr_decay=0.95,
+                    num_epochs=10, batch_size=64,
+                    print_every=10)
+    solver.train()
     layers.save_network('network')
-

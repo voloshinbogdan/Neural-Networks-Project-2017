@@ -5,6 +5,7 @@ from builtins import range
 from builtins import object
 import os
 import pickle as pickle
+import copy
 
 import numpy as np
 
@@ -184,6 +185,8 @@ class Solver(object):
 
         # Perform a parameter update
         for p, w in self.model.params.items():
+            if p not in grads:
+                continue
             dw = grads[p]
             config = self.optim_configs[p]
             next_w, next_config = self.update_rule(w, dw, config)
@@ -298,9 +301,7 @@ class Solver(object):
                 # Keep track of the best model
                 if val_acc > self.best_val_acc:
                     self.best_val_acc = val_acc
-                    self.best_params = {}
-                    for k, v in self.model.params.items():
-                        self.best_params[k] = v.copy()
+                    self.best_params = copy.deepcopy(self.model.params)
 
         # At the end of training swap the best params into the model
         self.model.params = self.best_params
