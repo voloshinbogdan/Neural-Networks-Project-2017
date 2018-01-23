@@ -4,3 +4,4 @@ cifar-10-batches-py
 slurm*.out
 *.swp
 *.pyc
+*.png
