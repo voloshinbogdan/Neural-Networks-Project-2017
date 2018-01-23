@@ -28,4 +28,4 @@ labels = [batch[i][b'labels'] for i in range(0, 5)]
 labels = np.concatenate(labels)
 
 test_data = test_batch[b'data']
-test_labels = test_batch[b'labels']
+test_labels = np.array(test_batch[b'labels'])

@@ -177,7 +177,7 @@ class Relu(Layer):
 
 
 class Batchnorm(Layer):
-    def __init__(self, size, eps, momentum, mode_name, prev, name=None):
+    def __init__(self, size, mode_name, prev, eps=1e-5, momentum=0.9, name=None):
         super(Batchnorm, self).__init__(name, prev)
         global params
         params[self.n('running_mean')] = np.zeros(size)
@@ -219,7 +219,7 @@ class Dropout(Layer):
 
     def _forward(self, x):
         global params
-        return dropout_froward(x, {'p': self.p, 'mode': params['mode_name']})
+        return dropout_forward(x, {'p': self.p, 'mode': params[self.mode_name]})
 
     def _backward(self, x, cache):
         return dropout_backward(x, cache)
@@ -245,13 +245,13 @@ class MaxPool(Layer):
 
 
 class SpatialBatchnorm(Layer):
-    def __init__(self, size, eps, momentum, mode_name, prev, name=None):
+    def __init__(self, size, mode_name, prev, eps=1e-5, momentum=0.9, name=None):
         super(SpatialBatchnorm, self).__init__(name, prev)
         global params
         params[self.n('running_mean')] = np.zeros(size)
         params[self.n('running_var')] = np.zeros(size)
-        params[self.n('gamma')] = np.ones(size)
-        params[self.n('beta')] = np.zeros(size)
+        params[self.n('gamma')] = np.ones(size[0])
+        params[self.n('beta')] = np.zeros(size[0])
         self.eps = eps
         self.momentum = momentum
         self.mode_name = mode_name
@@ -274,7 +274,7 @@ class SpatialBatchnorm(Layer):
     def _backward(self, x, cache):
         global grads
         dx, grads[self.n('gamma')], grads[self.n('beta')] = \
-            batchnorm_backward(x, cache)
+            spatial_batchnorm_backward(x, cache)
         return dx
 
 

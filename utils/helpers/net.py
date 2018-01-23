@@ -2,12 +2,15 @@ from builtins import range
 from builtins import object
 import numpy as np
 
+# TODO: Add mode train/test variable
 class NeuralNetwork(object):
 
-    def __init__(self, input_layer, loss_layer, loss_name, params, grads):
+    def __init__(self, input_layer, loss_layer, loss_name, ground_truth, mode_name, params, grads):
         self.input_layer = input_layer
         self.loss_layer = loss_layer
         self.loss_name = loss_name
+        self.ground_truth = ground_truth
+        self.mode_name = mode_name
         self.params = params
         self.grads = grads
 
@@ -30,11 +33,17 @@ class NeuralNetwork(object):
         - grads: Dictionary with the same keys as self.params, mapping parameter
           names to gradients of the loss with respect to those parameters.
         """
+        if y is None:
+            mode = 'test'
+        else:
+            mode = 'train'
+
         scores = None
 
         x = {
             '#input': X,
-            'y': y,
+            self.mode_name: mode,
+            self.ground_truth: y,
             self.loss_name: 0
         }
         scores = self.input_layer.forward(x)

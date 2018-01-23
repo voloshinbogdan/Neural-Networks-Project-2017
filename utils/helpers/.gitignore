@@ -1,2 +1,6 @@
 __pycache__
 *.pkl
+cifar-10-batches-py
+slurm*.out
+*.swp
+*.pyc

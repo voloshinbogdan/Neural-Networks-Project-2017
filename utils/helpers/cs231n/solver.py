@@ -216,6 +216,25 @@ class Solver(object):
             pickle.dump(checkpoint, f)
 
 
+    def load_checkpoint(self, fname):
+        with open(fname, 'rb') as f:
+            checkpoint = pickle.load(f)
+
+        self.model = checkpoint['model']
+        self.update_rule = checkpoint['update_rule']
+        self.lr_decay = checkpoint['lr_decay']
+        self.optim_config = checkpoint['optim_config']
+        self.batch_size = checkpoint['batch_size']
+        self.num_train_samples = checkpoint['num_train_samples']
+        self.num_val_samples = checkpoint['num_val_samples']
+        self.epoch = checkpoint['epoch']
+        self.loss_history = checkpoint['loss_history']
+        self.train_acc_history = checkpoint['train_acc_history']
+        self.val_acc_history = checkpoint['val_acc_history']
+
+        return self.model
+
+
     def check_accuracy(self, X, y, num_samples=None, batch_size=100):
         """
         Check accuracy of the model on the provided data.
